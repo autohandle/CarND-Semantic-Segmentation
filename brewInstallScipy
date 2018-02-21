@@ -1,0 +1,84 @@
+(tensorflow) Softwares-MacBook-Pro:CarND-Semantic-Segmentation david$ brew install scipy
+Updating Homebrew...
+==> Auto-updated Homebrew!
+Updated Homebrew from ef1924e1f to 2c84c04bd.
+Updated 2 taps (caskroom/cask, homebrew/core).
+==> New Formulae
+kube-ps1                                                                                                           mafft
+==> Updated Formulae
+babl                   chocolate-doom         fabio                  glade                  hatari                 libdill                mrboom                 pdns                   s-nail                 txr
+bareos-client          cimg                   flatcc                 global                 hostess                libical                netpbm                 pegtl                  sagittarius-scheme     unison
+binaryen               collector-sidecar      flow                   glpk                   imagemagick            libpqxx                node-build             percona-server         sceptre                winetricks
+blast                  coq                    fn                     go                     imagemagick@6          liquibase              ocaml                  phoronix-test-suite    sjk                    wireguard-tools
+blueutil               ddrescue               folly                  godep                  inspectrum             lnav                   ocaml-num              pilosa                 stlink                 wpscan
+byteman                dfmt                   forego                 goenv                  jenkins                macvim                 ocamlsdl               pybind11               storm                  wtf
+c-ares                 dmd                    freetds                gopass                 joplin                 mas                    openrtsp               restic                 strongswan             wxmaxima
+caddy                  dnscrypt-wrapper       geth                   gsoap                  just                   math-comp              osm2pgrouting          rkhunter               sysbench               xmrig
+camlp5                 embulk                 git                    hadolint               knot-resolver          modules                pandoc-citeproc        ruby                   tippecanoe             xtensor
+cassandra              emscripten             git-extras             haskell-stack          less                   mps-youtube            pc6001vx               rustup-init            tomcat                 zabbix
+==> Deleted Formulae
+ruby@1.9                                                                                                           ruby@2.1
+
+==> Installing dependencies for scipy: mpfr, libmpc, gcc, numpy
+==> Installing scipy dependency: mpfr
+==> Downloading https://homebrew.bintray.com/bottles/mpfr-4.0.1.sierra.bottle.tar.gz
+######################################################################## 100.0%
+==> Pouring mpfr-4.0.1.sierra.bottle.tar.gz
+🍺  /usr/local/Cellar/mpfr/4.0.1: 28 files, 4.6MB
+==> Installing scipy dependency: libmpc
+==> Downloading https://homebrew.bintray.com/bottles/libmpc-1.1.0.sierra.bottle.tar.gz
+######################################################################## 100.0%
+==> Pouring libmpc-1.1.0.sierra.bottle.tar.gz
+🍺  /usr/local/Cellar/libmpc/1.1.0: 12 files, 353.9KB
+==> Installing scipy dependency: gcc
+==> Downloading https://homebrew.bintray.com/bottles/gcc-7.3.0.sierra.bottle.1.tar.gz
+######################################################################## 100.0%
+==> Pouring gcc-7.3.0.sierra.bottle.1.tar.gz
+🍺  /usr/local/Cellar/gcc/7.3.0: 1,486 files, 284MB
+==> Installing scipy dependency: numpy
+==> Downloading https://homebrew.bintray.com/bottles/numpy-1.14.0.sierra.bottle.tar.gz
+######################################################################## 100.0%
+==> Pouring numpy-1.14.0.sierra.bottle.tar.gz
+Error: The `brew link` step did not complete successfully
+The formula built, but is not symlinked into /usr/local
+Could not symlink bin/f2py
+Target /usr/local/bin/f2py
+already exists. You may want to remove it:
+  rm '/usr/local/bin/f2py'
+
+To force the link and overwrite all conflicting files:
+  brew link --overwrite numpy
+
+To list all files that would be deleted:
+  brew link --overwrite --dry-run numpy
+
+Possible conflicting files are:
+/usr/local/bin/f2py
+==> Caveats
+If you use system python (that comes - depending on the OS X version -
+with older versions of numpy, scipy and matplotlib), you may need to
+ensure that the brewed packages come earlier in Python's sys.path with:
+  mkdir -p /Users/david/Library/Python/2.7/lib/python/site-packages
+  echo 'import sys; sys.path.insert(1, "/usr/local/lib/python2.7/site-packages")' >> /Users/david/Library/Python/2.7/lib/python/site-packages/homebrew.pth
+
+This formula installed .pth files to Homebrew's site-packages and your
+Python isn't configured to process them, so you will not be able to
+import the modules this formula installed. If you plan to develop
+with these modules, please run:
+  mkdir -p /Users/david/Library/Python/2.7/lib/python/site-packages
+  echo 'import site; site.addsitedir("/usr/local/lib/python2.7/site-packages")' >> /Users/david/Library/Python/2.7/lib/python/site-packages/homebrew.pth
+==> Summary
+🍺  /usr/local/Cellar/numpy/1.14.0: 939 files, 22.5MB
+==> Installing scipy
+==> Downloading https://homebrew.bintray.com/bottles/scipy-1.0.0_2.sierra.bottle.tar.gz
+######################################################################## 100.0%
+==> Pouring scipy-1.0.0_2.sierra.bottle.tar.gz
+==> Caveats
+If you use system python (that comes - depending on the OS X version -
+with older versions of numpy, scipy and matplotlib), you may need to
+ensure that the brewed packages come earlier in Python's sys.path with:
+  mkdir -p /Users/david/Library/Python/2.7/lib/python/site-packages
+  echo 'import sys; sys.path.insert(1, "/usr/local/lib/python2.7/site-packages")' >> /Users/david/Library/Python/2.7/lib/python/site-packages/homebrew.pth
+==> Summary
+🍺  /usr/local/Cellar/scipy/1.0.0_2: 1,962 files, 104.6MB
+(tensorflow) Softwares-MacBook-Pro:CarND-Semantic-Segmentation david$

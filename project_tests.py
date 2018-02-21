@@ -73,10 +73,19 @@ def test_load_vgg(load_vgg, tf_module):
         assert mock_load_model.call_args == mock.call(sess, ['vgg16'], vgg_path), \
             'tf.saved_model.loader.load() called with wrong arguments.'
 
+        print ("input_image:", input_image, " == ", test_input_image)
         assert input_image == test_input_image, 'input_image is the wrong object'
+
+        print ("keep_prob:", keep_prob, " == ", test_keep_prob)
         assert keep_prob == test_keep_prob, 'keep_prob is the wrong object'
+
+        print ("vgg_layer3_out:", vgg_layer3_out, " == ", test_vgg_layer3_out)
         assert vgg_layer3_out == test_vgg_layer3_out, 'layer3_out is the wrong object'
+
+        print ("vgg_layer4_out:", vgg_layer4_out, " == ", test_vgg_layer4_out)
         assert vgg_layer4_out == test_vgg_layer4_out, 'layer4_out is the wrong object'
+        
+        print ("vgg_layer7_out:", vgg_layer7_out, " == ", test_vgg_layer7_out)
         assert vgg_layer7_out == test_vgg_layer7_out, 'layer7_out is the wrong object'
 
 
