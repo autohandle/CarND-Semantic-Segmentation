@@ -1,0 +1,22 @@
+EPOCH 1 ...
+Traceback (most recent call last):
+  File "main.py", line 203, in <module>
+    run()
+  File "main.py", line 194, in run
+    correct_label, keep_prob, learning_rate)
+  File "main.py", line 144, in train_nn
+    for image, label in get_batches_fn(batch_size):
+  File "/Users/david/Documents/UdacitysSelfDrivingCarProgram/lessons/term3/jeremy-shannon/CarND-Semantic-Segmentation/helper.py", line 87, in get_batches_fn
+    image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+AttributeError: module 'scipy.misc' has no attribute 'imresize'
+
+(tensorflow) Softwares-MacBook-Pro:CarND-Semantic-Segmentation david$ pip install pillow
+Collecting pillow
+  Downloading Pillow-5.0.0-cp36-cp36m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (3.5MB)
+    100% |████████████████████████████████| 3.5MB 299kB/s
+Installing collected packages: pillow
+Successfully installed pillow-5.0.0
+(tensorflow) Softwares-MacBook-Pro:CarND-Semantic-Segmentation david$
+
+
+https://github.com/scipy/scipy/issues/6212

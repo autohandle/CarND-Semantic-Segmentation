@@ -17,7 +17,10 @@ if not tf.test.gpu_device_name():
 else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
-
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
+    
 def load_vgg(sess, vgg_path):
     """
     Load Pretrained VGG Model into TensorFlow.
@@ -36,7 +39,6 @@ def load_vgg(sess, vgg_path):
 
     tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
     graph=tf.get_default_graph()
-    print("global variables:\n", [n.name for n in tf.get_default_graph().as_graph_def().node])
     input_image=graph.get_tensor_by_name(vgg_input_tensor_name)
     keep_prob=graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
 
@@ -44,7 +46,10 @@ def load_vgg(sess, vgg_path):
     layer4=graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
     layer7=graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
 
-    
+    print("load_vgg-input_image:", input_image)
+    #input_image.set_shape((None,224,224,3))
+    print("load_vgg-input_image:", input_image)
+
     return input_image, keep_prob, layer3, layer4, layer7
 tests.test_load_vgg(load_vgg, tf)
 
@@ -63,8 +68,56 @@ tests.test_load_vgg(load_vgg, tf)
 #   A tuple or list of 2 positive integers specifying the strides of the convolution.
 #   Can be a single integer to specify the same value for all spatial dimensions.
 
-strides: A tuple or list of 2 positive integers specifying the strides of the convolution. Can be a single integer to specify the same value for all spatial dimensions.
 REGULARIZEDLAYERS=False
+STANDARDDEVIATION=0.01
+
+def convT(suffix, input, numberOfChannels, filterSize, strideSize):
+    convolutionName="convT_"+str(suffix)
+    if REGULARIZEDLAYERS:
+        return tf.layers.conv2d_transpose(input, numberOfChannels, filterSize, strideSize, padding="same",
+            kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName,
+            kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
+    else:
+        return tf.layers.conv2d_transpose(input, numberOfChannels, filterSize, strideSize, padding="same",
+            kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName)
+
+def conv(suffix, input, numberOfChannels, filterSize, strideSize):
+    convolutionName="conv_"+str(suffix)
+    if REGULARIZEDLAYERS:
+        return tf.layers.conv2d(input, numberOfChannels, filterSize, strideSize, padding="same",
+            kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName,
+            kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
+    else:
+        return tf.layers.conv2d(input, numberOfChannels, filterSize, strideSize, padding="same",
+            kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName)
+
+def reduceChannels(suffix, input, numberOfChannels):
+    print("reduceChannels-input:", input)
+    return conv(suffix, input, numberOfChannels, 1, 1)
+
+def increaseXY(suffix, input, ratio):
+    print("increaseXY-filterSize:", ratio, ", input:", input)
+    numberOfChannels=input.shape[3]
+    return convT(suffix, input, numberOfChannels, ratio, ratio)
+
+otherTensorNames=[
+"layer7_out:0",
+"conv_5x18x512/Conv2D:0", "conv_5x18x512/kernel:0",
+"convT_10x36x512/conv2d_transpose:0", "convT_10x36x512/kernel:0",
+"add10x36x512:0",
+"conv_10x36x256/Conv2D:0", "conv_10x36x256/kernel:0",
+"convT_20x72x256/conv2d_transpose:0", "convT_20x72x256/kernel:0",
+"add20x72x256:0",
+"conv_20x72x128/Conv2D:0", "conv_20x72x128/kernel:0",
+"convT_40x144x128/conv2d_transpose:0", "convT_40x144x128/kernel:0",
+"conv_40x144x64/Conv2D:0", "conv_40x144x64/kernel:0",
+"convT_80x288x64/conv2d_transpose:0", "convT_80x288x64/kernel:0",
+"conv_80x288x32/Conv2D:0", "conv_80x288x32/kernel:0",
+"convT_160x576x32/conv2d_transpose:0", "convT_160x576x32/kernel:0",
+"conv_160x576x2/Conv2D:0", "conv_160x576x2/kernel:0",
+
+]
+
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -74,34 +127,39 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+    # the FINAL convolutional transpose layer will be 4-dimensional: (batch_size, original_height, original_width, num_classes)
+
     # TODO: Implement function
-    if REGULARIZEDLAYERS:
-        conv_1x1=tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding="same", kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
-        output=tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding="same", kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
-    else:
-        conv_1x1=tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding="same", name="conv_1x1")
-        upSample7=tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding="same",
-            kernel_initializer= tf.random_normal_initializer(stddev=0.01), name="cov2dT_7")
-        print ("layers-upSample7:", upSample7, " == ", vgg_layer7_out)
-        conv_1x1_7=tf.layers.conv2d(upSample7, num_classes, 1, padding="same", name="conv_1x1_7")
-        print ("layers-conv_1x1_7:", conv_1x1_7)
- 
-        upSample4=tf.layers.conv2d_transpose(conv_1x1_7, num_classes, 4, 2, padding="same",
-            kernel_initializer= tf.random_normal_initializer(stddev=0.01), name="cov2dT_4")
-        print ("layers-upSample4:", upSample4, " == ", vgg_layer4_out)
-        conv_1x1_4=tf.layers.conv2d(upSample4, num_classes, 1, padding="same", name="conv_1x1_4")
-        print ("layers-conv_1x1_4:", conv_1x1_4)
+    # ?,5,18,4096 -> ?,5,18,512
+    channels512=reduceChannels("5x18x512", vgg_layer7_out, 512)
+    print ("layers-channels512:", channels512) 
+    # ?,5,18,512 -> 10x36x512
+    xy10x36=increaseXY("10x36x512", channels512, 2)
+    # add layer 4
+    add10x36x512=tf.add(xy10x36, vgg_layer4_out, name="add10x36x512")
+    # 10x36x512 -> 10x36x256
+    channels256=reduceChannels("10x36x256", add10x36x512, 256)
+    # 10x36x256 -> 20x72x256
+    xy20x72=increaseXY("20x72x256", channels256, 2)
+    # add layer 3
+    add20x72x256=tf.add(xy20x72, vgg_layer3_out, name="add20x72x256")
+    # 20x72x256 -> 20x72x128
+    channels128=reduceChannels("20x72x128", add20x72x256, 128)
+    # 20x72x128 -> 40x144x128
+    xy40x144=increaseXY("40x144x128", channels128, 2)
+    # 40x144x128 -> 40x144x64
+    channels64=reduceChannels("40x144x64", xy40x144, 64)
+    # 40x144x64 -> 80x288x64
+    xy80x288=increaseXY("80x288x64", channels64, 2)
+    # 80x288x64 -> 80x288x32
+    channels32=reduceChannels("80x288x32", xy80x288, 32)
+    # 80x288x32 -> 160x576x32
+    xy160x576=increaseXY("160x576x32", channels32, 2)
+    # 160x576x32 -> 160x576x2
+    only2Channels=reduceChannels("160x576x2", xy160x576, num_classes)
+    print ("layers-only2Channels:", only2Channels)
 
-        upSample3=tf.layers.conv2d_transpose(conv_1x1_4, num_classes, 4, 2, padding="same",
-            kernel_initializer= tf.random_normal_initializer(stddev=0.01), name="cov2dT_3")
-        print ("layers-upSample3:", upSample3, " == ", vgg_layer3_out)
-        conv_1x1_3=tf.layers.conv2d(upSample3, num_classes, 1, padding="same", name="conv_1x1_3")
-        print ("layers-conv_1x1_3:", conv_1x1_3)    
-
-    output=conv_1x1_3
-    print ("layers-output:", output)
-
-    return output
+    return only2Channels
 
 tests.test_layers(layers)
 
@@ -146,6 +204,32 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     pass
 #tests.test_train_nn(train_nn)
 
+vggTensorNames=[
+"keep_prob:0", "image_input:0",
+"conv1_1/Conv2D:0", "conv1_1/filter:0",
+    "conv1_2/Conv2D:0", "conv1_2/filter:0",
+    "pool1:0",
+"conv2_1/Conv2D:0", "conv2_1/filter:0", 
+    "conv2_2/Conv2D:0", "conv2_2/filter:0",
+    "pool2:0",
+"conv3_1/Conv2D:0", "conv3_1/filter:0",
+    "conv3_2/Conv2D:0", "conv3_2/filter:0",
+    "conv3_3/Conv2D:0", "conv3_3/filter:0",
+    "pool3:0",
+"layer3_out:0",
+"conv4_1/Conv2D:0", "conv4_1/filter:0",
+    "conv4_2/Conv2D:0", "conv4_2/filter:0",
+    "conv4_3/Conv2D:0", "conv4_3/filter:0",
+    "pool4:0",
+"layer4_out:0",
+"conv5_1/Conv2D:0", "conv5_1/filter:0",
+    "conv5_2/Conv2D:0", "conv5_2/filter:0",
+    "conv5_3/Conv2D:0", "conv5_3/filter:0",
+    "pool5:0",
+"fc6/Conv2D:0", "dropout/mul:0",
+"fc7/Conv2D:0", "dropout_1/mul:0",
+"layer7_out:0",
+]
 
 def run():
     num_classes = 2
@@ -153,11 +237,6 @@ def run():
     data_dir = './data' # this is right
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
-
-    now=datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    root_logdir="/tmp"
-    logdir="{}/tensorflow-{}/".format(root_logdir, now)
-
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
@@ -178,8 +257,18 @@ def run():
         # TODO: Build NN using load_vgg, layers, and optimize function
         input_image, keep_prob, layer3, layer4, layer7=load_vgg(sess, vgg_path)
         nn_layers = layers(layer3, layer4, layer7, num_classes) # num_classes==2
-        tensorboard_writer = tf.summary.FileWriter(logdir, tf.get_default_graph())
-        tensorboard_writer.close()
+
+
+        batch_size = 5
+
+        helper.saveGraph(runs_dir, sess.graph)
+        print("get_batches_fn:", type(get_batches_fn(batch_size)))
+        image, label=get_batches_fn(batch_size)
+        print ("run-image[0].type:",type(image[0]), ", shape:", image[0].shape)
+        #reshapeLabel=label[0].reshape((-1,num_classes))
+        reshapeLabel=label[0][:,:,:,0:2]
+        print ("run-label[0].type:",type(label[0]), ", shape:", label[0].shape, ", reshapeLabel.shape:", reshapeLabel.shape)
+        helper.showTensorSizes({input_image: image[0], keep_prob: 0.5}, sess, otherTensorNames)
 
         # TODO: Train NN using the train_nn function
 

@@ -10,6 +10,7 @@ import tensorflow as tf
 from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
+from datetime import datetime
 
 
 class DLProgress(tqdm):
@@ -57,7 +58,7 @@ def maybe_download_pretrained_vgg(data_dir):
         # Remove zip file to save space
         os.remove(os.path.join(vgg_path, vgg_filename))
 
-
+# ./data/vgg/data_road/training, 170x576
 def gen_batch_function(data_folder, image_shape):
     """
     Generate function to create batches of training data
@@ -71,19 +72,22 @@ def gen_batch_function(data_folder, image_shape):
         :param batch_size: Batch Size
         :return: Batches of training data
         """
-        image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
+        image_paths = glob(os.path.join(data_folder, 'image_2', '*.png')) # image: ./data/vgg/data_road/training/image_2: 1242x375
         label_paths = {
             re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
-            for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
-        background_color = np.array([255, 0, 0])
+            for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))} # labels/truth: ./data/vgg/data_road/training/gt_image_2: 1242x375
+        background_color = np.array([255, 0, 0]) # all red
 
         random.shuffle(image_paths)
-        for batch_i in range(0, len(image_paths), batch_size):
+        # TODO ----------> reduce number of batches
+        #for batch_i in range(0, len(image_paths), batch_size):
+        for batch_i in range(0, 2*batch_size, batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i+batch_size]:
                 gt_image_file = label_paths[os.path.basename(image_file)]
 
+                # reside to 170x576
                 image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
@@ -94,6 +98,7 @@ def gen_batch_function(data_folder, image_shape):
                 images.append(image)
                 gt_images.append(gt_image)
 
+            print("yielding")
             yield np.array(images), np.array(gt_images)
     return get_batches_fn
 
@@ -138,3 +143,25 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
         sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
     for name, image in image_outputs:
         scipy.misc.imsave(os.path.join(output_dir, name), image)
+
+def saveGraph(runs_dir, tensorflowGraph=tf.get_default_graph()):
+    now=datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    graphdir="{}/graph-{}/".format(runs_dir, now)
+    tensorboard_writer = tf.summary.FileWriter(graphdir, tensorflowGraph)
+    tensorboard_writer.close()
+
+def showTensorSizes(dictionary, session, tensorNames):
+    graph=session.graph
+    session.run(tf.global_variables_initializer())
+    print("showTensorSizes-global variables:\n", [n.name for n in tf.get_default_graph().as_graph_def().node])
+    for tensorName in tensorNames:
+        layer=graph.get_tensor_by_name(tensorName)
+        #print ("showTensorSizes-tensorName:", tensorName, ", layer:", layer)
+        layer_eval=layer.eval(feed_dict=dictionary)
+        isLayerAnArray=isinstance(layer_eval,np.ndarray)
+        #print ("showTensorSizes-tensorName:", tensorName, ", layer_eval.type:", type(layer_eval), ", isLayerAnArray? ", isLayerAnArray)
+        if (isLayerAnArray):
+            print ("showTensorSizes-tensorName:", tensorName, ", shape:", layer_eval.shape)
+        else:
+            print ("showTensorSizes-tensorName:", tensorName, ", layer:", layer, ", layer_eval:", layer_eval)
+

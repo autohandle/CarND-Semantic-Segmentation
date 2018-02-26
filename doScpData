@@ -1,0 +1,2 @@
+#!/bin/bash
+scp -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" data/*zip ubuntu@ec2-52-206-224-226.compute-1.amazonaws.com:.
