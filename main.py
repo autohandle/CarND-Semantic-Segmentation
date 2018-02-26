@@ -210,19 +210,18 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-        # Get the logits for the different pixels in the image
-    logits = tf.reshape(nn_last_layer, (-1, num_classes))
-
-    # Reshape the label to be the same size as logits
-    labels = tf.reshape(correct_label, (-1, num_classes))
-
-    # Define cross_entropy_loss
-    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
-
-    # Define optimizer
-    train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss)
+    sess.run(tf.global_variables_initializer())
     
-    return logits, train_op, cross_entropy_loss
+    print("Training...")
+    print()
+    for i in range(epochs):
+        print("EPOCH {} ...".format(i+1))
+        for image, label in get_batches_fn(batch_size):
+            _, loss = sess.run([train_op, cross_entropy_loss], 
+                               feed_dict={input_image: image, correct_label: label,
+                               keep_prob: 0.5, learning_rate: 0.0009})
+            print("Loss: = {:.3f}".format(loss))
+        print()
 tests.test_train_nn(train_nn)
 
 vggTensorNames=[
