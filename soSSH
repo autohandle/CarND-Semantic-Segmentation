@@ -1,4 +1,4 @@
 INSTANCE=${1}
 echo INSTANCE "<"${INSTANCE}">"
 #ssh -X -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}
-ssh -X -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}
+ssh -Y -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}

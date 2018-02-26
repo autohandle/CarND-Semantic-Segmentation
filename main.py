@@ -20,7 +20,7 @@ else:
 def get_available_gpus():
     local_device_protos = device_lib.list_local_devices()
     return [x.name for x in local_device_protos if x.device_type == 'GPU']
-    
+
 def load_vgg(sess, vgg_path):
     """
     Load Pretrained VGG Model into TensorFlow.
@@ -181,8 +181,17 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # TODO: Implement function
     # tf.reshape: 4d to 2d: height/classes x width/pixels
     # 
-    return None, None, None
-#tests.test_optimize(optimize)
+    #return None, None, None
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    correct_label = tf.reshape(correct_label, (-1,num_classes))
+    # define loss function
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits= logits, labels= correct_label))
+    # define training operation
+    optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
+    train_op = optimizer.minimize(cross_entropy_loss)
+
+    return logits, train_op, cross_entropy_loss
+tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
@@ -201,8 +210,20 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    pass
-#tests.test_train_nn(train_nn)
+        # Get the logits for the different pixels in the image
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+
+    # Reshape the label to be the same size as logits
+    labels = tf.reshape(correct_label, (-1, num_classes))
+
+    # Define cross_entropy_loss
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+
+    # Define optimizer
+    train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss)
+    
+    return logits, train_op, cross_entropy_loss
+tests.test_train_nn(train_nn)
 
 vggTensorNames=[
 "keep_prob:0", "image_input:0",
@@ -261,15 +282,6 @@ def run():
 
         batch_size = 5
 
-        helper.saveGraph(runs_dir, sess.graph)
-        print("get_batches_fn:", type(get_batches_fn(batch_size)))
-        image, label=get_batches_fn(batch_size)
-        print ("run-image[0].type:",type(image[0]), ", shape:", image[0].shape)
-        #reshapeLabel=label[0].reshape((-1,num_classes))
-        reshapeLabel=label[0][:,:,:,0:2]
-        print ("run-label[0].type:",type(label[0]), ", shape:", label[0].shape, ", reshapeLabel.shape:", reshapeLabel.shape)
-        helper.showTensorSizes({input_image: image[0], keep_prob: 0.5}, sess, otherTensorNames)
-
         # TODO: Train NN using the train_nn function
 
         # TODO: Save inference data using helper.save_inference_samples
@@ -277,6 +289,25 @@ def run():
 
         # OPTIONAL: Apply the trained model to a video
 
+        # Create Optimizer
+        logits, train_op, cross_entropy_loss =  optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
+        # Train NN using the train_nn function
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_tensor
+                 , correct_label, keep_prob_tensor, learning_rate)
+
+        # Save inference data using helper.save_inference_samples
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob_tensor, input_tensor)
+
+def showGraph(runs_dir, session, get_batches_fn, batch_size):
+        helper.saveGraph(runs_dir, session.graph)
+        print("get_batches_fn:", type(get_batches_fn(batch_size)))
+        image, label=get_batches_fn(batch_size)
+        print ("run-image[0].type:",type(image[0]), ", shape:", image[0].shape)
+        #reshapeLabel=label[0].reshape((-1,num_classes))
+        reshapeLabel=label[0][:,:,:,0:2]
+        print ("run-label[0].type:",type(label[0]), ", shape:", label[0].shape, ", reshapeLabel.shape:", reshapeLabel.shape)
+        helper.showTensorSizes({input_image: image[0], keep_prob: 0.5}, sess, otherTensorNames)
+        
 if __name__ == '__main__':
     run()
