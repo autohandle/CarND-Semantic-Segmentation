@@ -99,7 +99,7 @@ def gen_batch_function(data_folder, image_shape):
                 images.append(image)
                 gt_images.append(gt_image)
 
-            print("yielding")
+            #print("yielding")
             yield np.array(images), np.array(gt_images)
     return get_batches_fn
 

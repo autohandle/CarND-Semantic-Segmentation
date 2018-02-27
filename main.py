@@ -5,6 +5,7 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 from datetime import datetime
+import time
 
 
 # Check TensorFlow Version
@@ -46,9 +47,9 @@ def load_vgg(sess, vgg_path):
     layer4=graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
     layer7=graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
 
-    print("load_vgg-input_image:", input_image)
+    #print("load_vgg-input_image:", input_image)
     #input_image.set_shape((None,224,224,3))
-    print("load_vgg-input_image:", input_image)
+    #print("load_vgg-input_image:", input_image)
 
     return input_image, keep_prob, layer3, layer4, layer7
 tests.test_load_vgg(load_vgg, tf)
@@ -68,7 +69,7 @@ tests.test_load_vgg(load_vgg, tf)
 #   A tuple or list of 2 positive integers specifying the strides of the convolution.
 #   Can be a single integer to specify the same value for all spatial dimensions.
 
-REGULARIZEDLAYERS=False
+REGULARIZEDLAYERS=True
 STANDARDDEVIATION=0.01
 
 def convT(suffix, input, numberOfChannels, filterSize, strideSize):
@@ -92,11 +93,11 @@ def conv(suffix, input, numberOfChannels, filterSize, strideSize):
             kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName)
 
 def reduceChannels(suffix, input, numberOfChannels):
-    print("reduceChannels-input:", input)
+    #print("reduceChannels-input:", input)
     return conv(suffix, input, numberOfChannels, 1, 1)
 
 def increaseXY(suffix, input, ratio):
-    print("increaseXY-filterSize:", ratio, ", input:", input)
+    #print("increaseXY-filterSize:", ratio, ", input:", input)
     numberOfChannels=input.shape[3]
     return convT(suffix, input, numberOfChannels, ratio, ratio)
 
@@ -132,7 +133,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # TODO: Implement function
     # ?,5,18,4096 -> ?,5,18,512
     channels512=reduceChannels("5x18x512", vgg_layer7_out, 512)
-    print ("layers-channels512:", channels512) 
+    #print ("layers-channels512:", channels512) 
     # ?,5,18,512 -> 10x36x512
     xy10x36=increaseXY("10x36x512", channels512, 2)
     # add layer 4
@@ -157,7 +158,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     xy160x576=increaseXY("160x576x32", channels32, 2)
     # 160x576x32 -> 160x576x2
     only2Channels=reduceChannels("160x576x2", xy160x576, num_classes)
-    print ("layers-only2Channels:", only2Channels)
+    #print ("layers-only2Channels:", only2Channels)
 
     return only2Channels
 
@@ -214,13 +215,15 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     
     print("Training...")
     print()
+    startTime=time.time()
     for i in range(epochs):
         print("EPOCH {} ...".format(i+1))
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss], 
                                feed_dict={input_image: image, correct_label: label,
                                keep_prob: 0.5, learning_rate: 0.0009})
-            print("Loss: = {:.3f}".format(loss))
+            deltaTime=time.time()-startTime
+            print("Loss: = {:.3f}, Elapsed: = {:.3f} seconds".format(loss, deltaTime))
         print()
 tests.test_train_nn(train_nn)
 
@@ -276,9 +279,9 @@ def run():
 
         # TODO: Build NN using load_vgg, layers, and optimize function
         input_image, keep_prob, layer3, layer4, layer7=load_vgg(sess, vgg_path)
-        nn_layers = layers(layer3, layer4, layer7, num_classes) # num_classes==2
+        nn_last_layer = layers(layer3, layer4, layer7, num_classes) # num_classes==2
 
-
+        epochs = 50
         batch_size = 5
 
         # TODO: Train NN using the train_nn function
@@ -289,14 +292,18 @@ def run():
         # OPTIONAL: Apply the trained model to a video
 
         # Create Optimizer
+        # TF placeholders
+        correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='correct_label')
+        learning_rate = tf.placeholder(tf.float32, name='learning_rate')
+
         logits, train_op, cross_entropy_loss =  optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         # Train NN using the train_nn function
-        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_tensor
-                 , correct_label, keep_prob_tensor, learning_rate)
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image
+                 , correct_label, keep_prob, learning_rate)
 
         # Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob_tensor, input_tensor)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_tensor)
 
 def showGraph(runs_dir, session, get_batches_fn, batch_size):
         helper.saveGraph(runs_dir, session.graph)
@@ -307,6 +314,6 @@ def showGraph(runs_dir, session, get_batches_fn, batch_size):
         reshapeLabel=label[0][:,:,:,0:2]
         print ("run-label[0].type:",type(label[0]), ", shape:", label[0].shape, ", reshapeLabel.shape:", reshapeLabel.shape)
         helper.showTensorSizes({input_image: image[0], keep_prob: 0.5}, sess, otherTensorNames)
-        
+
 if __name__ == '__main__':
     run()
