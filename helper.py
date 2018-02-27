@@ -11,7 +11,12 @@ from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
 from datetime import datetime
+import socket
 
+RUNLOCAL=socket.gethostname()=="Softwares-MacBook-Pro.local"
+print("RUNLOCAL? ", RUNLOCAL, ", hostname:", socket.gethostname())
+
+TensorboardWriter=None
 
 class DLProgress(tqdm):
     last_block = 0
@@ -142,12 +147,15 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
     print('Training Finished. Saving test images to: {}'.format(output_dir))
     image_outputs = gen_test_output(
         sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
+    imageNumber=0
     for name, image in image_outputs:
+        imageNumber+=1
         scipy.misc.imsave(os.path.join(output_dir, name), image)
+        if RUNLOCAL and imageNumber>10:
+            break
 
-def saveGraph(runs_dir, tensorflowGraph=tf.get_default_graph()):
-    now=datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    graphdir="{}/graph-{}/".format(runs_dir, now)
+def saveGraph(runs_dir, tensorflowGraph=tf.get_default_graph(), filename=datetime.utcnow().strftime("%Y%m%d%H%M%S")):
+    graphdir="{}/graph-{}/".format(runs_dir, filename)
     tensorboard_writer = tf.summary.FileWriter(graphdir, tensorflowGraph)
     tensorboard_writer.close()
 

@@ -7,7 +7,6 @@ import project_tests as tests
 from datetime import datetime
 import time
 
-
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
 print('TensorFlow Version: {}'.format(tf.__version__))
@@ -170,6 +169,15 @@ tests.test_layers(layers)
 # correct_label:
 # learning_rate:
 # num_classes:
+def isVariable(name):
+    print("isVariable-"+name+" global? ", (name in globals()))
+    return (name in globals())
+
+def isInitialized(name, variable):
+    print("isInitialized-"+name+"? ", (variable!=None), ", value:", str(variable))
+    return variable!=None
+
+tensorsToLog=[]
 def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     Build the TensorFLow loss and optimizer operations.
@@ -187,14 +195,16 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     correct_label = tf.reshape(correct_label, (-1,num_classes))
     # define loss function
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits= logits, labels= correct_label))
+    tf.summary.scalar("cross_entropy_loss", cross_entropy_loss)
     # define training operation
-    optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
+
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     train_op = optimizer.minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
 
-
+LEARNINGRATE=0.0005
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
              correct_label, keep_prob, learning_rate):
     """
@@ -214,16 +224,52 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     sess.run(tf.global_variables_initializer())
     
     print("Training...")
+
+    if (isInitialized("helper.TensorboardWriter", helper.TensorboardWriter)):
+        helper.TensorboardWriter.add_graph(sess.graph)
+        mergedSummary=tf.summary.merge_all()
+
+
     print()
     startTime=time.time()
+    epochsbatch=0
+    summaryEvery=10
+    if helper.RUNLOCAL:
+        summaryEvery=1
+
     for i in range(epochs):
-        print("EPOCH {} ...".format(i+1))
+        print("EPOCH {} (of {})".format(i+1, epochs))
+        batch=0
         for image, label in get_batches_fn(batch_size):
-            _, loss = sess.run([train_op, cross_entropy_loss], 
-                               feed_dict={input_image: image, correct_label: label,
-                               keep_prob: 0.5, learning_rate: 0.0009})
-            deltaTime=time.time()-startTime
-            print("Loss: = {:.3f}, Elapsed: = {:.3f} seconds".format(loss, deltaTime))
+            dictionary={input_image: image, correct_label: label,
+                               keep_prob: 0.5, learning_rate: LEARNINGRATE}
+            # run(fetches,feed_dict=None,options=None,run_metadata=None)
+
+            # The fetches argument may be a single graph element,
+            #   or an arbitrarily nested list, tuple, namedtuple, dict,
+            #   or OrderedDict containing graph elements at its leaves
+            # The value returned by run() has the same shape as the fetches argument,
+            #   where the leaves are replaced by the corresponding values returned by TensorFlow.
+            loss=0
+            batch+=1
+            epochsbatch+=1
+            if ((epochsbatch%summaryEvery)==0):
+                # does TensorboardWriter exist (because of unit test)
+                if (isInitialized("helper.TensorboardWriter", helper.TensorboardWriter)):
+                    _, loss, summary=sess.run([train_op, cross_entropy_loss, mergedSummary], 
+                               feed_dict=dictionary)
+                    helper.TensorboardWriter.add_summary(summary, batch)
+                    if helper.RUNLOCAL:
+                        print ("train-nn summary added")
+            else:
+                _, loss = sess.run([train_op, cross_entropy_loss], 
+                               feed_dict=dictionary)
+            elapsedTime=time.time()-startTime
+            print("batch: {:d}, cross entropy loss: {:.3f}, elapsed time: {:.3f} seconds".format(batch, loss, elapsedTime))
+
+            if helper.RUNLOCAL and batch>5:
+                break
+
         print()
 tests.test_train_nn(train_nn)
 
@@ -261,6 +307,9 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
+    helper.TensorboardWriter=tf.summary.FileWriter("{}/tensorboard-{}-{}/".format(runs_dir, LEARNINGRATE, (datetime.utcnow().strftime("%Y%m%d%H%M%S"))))
+    #print ("run-helper.TensorboardWriter:", str(helper.TensorboardWriter))
+
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
@@ -284,6 +333,10 @@ def run():
         epochs = 50
         batch_size = 5
 
+        if helper.RUNLOCAL:
+            epochs = 1
+            batch_size = 5
+
         # TODO: Train NN using the train_nn function
 
         # TODO: Save inference data using helper.save_inference_samples
@@ -296,6 +349,7 @@ def run():
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='correct_label')
         learning_rate = tf.placeholder(tf.float32, name='learning_rate')
 
+        tensorsToLog.append("learning_rate")
         logits, train_op, cross_entropy_loss =  optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         # Train NN using the train_nn function
@@ -303,7 +357,9 @@ def run():
                  , correct_label, keep_prob, learning_rate)
 
         # Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_tensor)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+
+    helper.TensorboardWriter.close()
 
 def showGraph(runs_dir, session, get_batches_fn, batch_size):
         helper.saveGraph(runs_dir, session.graph)
