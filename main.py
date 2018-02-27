@@ -77,7 +77,7 @@ def convT(suffix, input, numberOfChannels, filterSize, strideSize):
     if REGULARIZEDLAYERS:
         return tf.layers.conv2d_transpose(input, numberOfChannels, filterSize, strideSize, padding="same",
             kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName,
-            kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
+            kernel_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
     else:
         return tf.layers.conv2d_transpose(input, numberOfChannels, filterSize, strideSize, padding="same",
             kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName)
@@ -87,7 +87,7 @@ def conv(suffix, input, numberOfChannels, filterSize, strideSize):
     if REGULARIZEDLAYERS:
         return tf.layers.conv2d(input, numberOfChannels, filterSize, strideSize, padding="same",
             kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName,
-            kernal_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
+            kernel_regularizer=tf.contrib.layers.l2_regularizer(1.e-3))
     else:
         return tf.layers.conv2d(input, numberOfChannels, filterSize, strideSize, padding="same",
             kernel_initializer= tf.random_normal_initializer(stddev=STANDARDDEVIATION), name=convolutionName)
