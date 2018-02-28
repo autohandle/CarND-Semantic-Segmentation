@@ -258,7 +258,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 if (isInitialized("helper.TensorboardWriter", helper.TensorboardWriter)):
                     _, loss, summary=sess.run([train_op, cross_entropy_loss, mergedSummary], 
                                feed_dict=dictionary)
-                    helper.TensorboardWriter.add_summary(summary, batch)
+                    helper.TensorboardWriter.add_summary(summary, epochsbatch)
                     if helper.RUNLOCAL:
                         print ("train-nn summary added")
             else:
