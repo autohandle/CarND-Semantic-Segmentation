@@ -1,0 +1,5 @@
+#!/bin/bash
+INSTANCE=${1}
+IMAGE=${2}
+echo ${IMAGE}" from "${INSTANCE}
+scp -r -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}":"'./CarND-Semantic-Segmentation/runs/'"${IMAGE}" ./runs/"${IMAGE}"
