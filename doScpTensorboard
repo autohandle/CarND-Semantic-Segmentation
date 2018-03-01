@@ -2,5 +2,4 @@
 INSTANCE=${1}
 TENSORBOARD=${2}
 echo ${TENSORBOARD}" from "${INSTANCE}
-#scp -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}":"'jeremyshannon/CarND-Semantic-Segmentation/runs/1519686240.8257887/*_000000.png' runs
 scp -r -i "/Users/david/Documents/amazonws/ubuntu/autohandleubuntu-12-64.pem" ubuntu@${INSTANCE}":"'./CarND-Semantic-Segmentation/runs/'${TENSORBOARD} ./runs
